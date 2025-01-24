@@ -191,19 +191,16 @@ def main(args):
 			imgs = imgs.to(device=device, dtype=torch.float32)
 			mask_type = torch.float32
 			true_masks = true_masks.to(device=device, dtype=mask_type)
-			true_masks = torch.nn.functional.one_hot(true_masks.long(), num_classes=num_classes).squeeze(1).permute(0,
-																													3,
-																													1,
-																													2)
+			true_masks = torch.nn.functional.one_hot(true_masks.long(), num_classes=num_classes).permute(0, 3, 2, 1)
 			masks_pred = model(imgs)
 			losses = []
 			d0_loss = 0
 			for i in range(6):
-				loss = iou_loss(masks_pred[i].to(mask_type), true_masks) + torch.nn.functional.cross_entropy(masks_pred[i].to(mask_type), true_masks.to(torch.float32)) + \
-				       dice_loss(masks_pred[i].to(mask_type), true_masks.to(torch.float32))
+				loss = dice_loss(masks_pred[i], true_masks.float()) \
+							+ torch.nn.CrossEntropyLoss()(masks_pred[i], true_masks.float())
 				loss.to(device=device).to(torch.float32)
 				losses.append(loss)
-				if not i :
+				if not i:
 					d0_loss = loss
 			loss = sum(losses)
 			print("d0_loss", d0_loss)
@@ -221,16 +218,16 @@ def main(args):
 def parse_args():
 	import argparse
 	parser = argparse.ArgumentParser(description="pytorch unet training")
-	parser.add_argument("--image_path", default="/home/ibra/Documents/DATA/segmentation/datasets/branch/test/image/",
+	parser.add_argument("--image_path", default="/home/ibra/Documents/DATA/segmentation/datasets/branch/test1/imgs/",
 						help="dataset root")
-	parser.add_argument("--mask_path", default="/home/ibra/Documents/DATA/segmentation/datasets/branch/test/mask/",
+	parser.add_argument("--mask_path", default="/home/ibra/Documents/DATA/segmentation/datasets/branch/test1/masks/",
 						help="dataset root")
 	parser.add_argument("--num_classes", default=1, type=int)
 	parser.add_argument("--device", default="cuda:0", help="training device")
-	parser.add_argument("-b", "--batch_size", default=2, type=int)
+	parser.add_argument("-b", "--batch_size", default=1, type=int)
 	parser.add_argument("--epochs", default=100, type=int, metavar="N",
 						help="number of total epochs to train")
-	parser.add_argument('--lr', default=0.0001, type=float, help='initial learning rate')
+	parser.add_argument('--lr', default=0.00001, type=float, help='initial learning rate')
 	parser.add_argument('--optimizer', default='SGD-M', choices=['SGD-M', 'Adam'], help='optimizer')
 	parser.add_argument('--momentum', default=0.9, type=float, metavar='M', help='momentum')
 	parser.add_argument('--wd', '--weight-decay', default=1e-4, type=float,
